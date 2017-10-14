@@ -1,0 +1,26 @@
+#! /usr/bin/env python2.7
+from scapy.layers.inet6 import IPv6, ICMPv6ND_RA
+from netfilterqueue import NetfilterQueue
+
+def modify(packet):
+    pkt = IPv6(packet.get_payload()) #converts the raw packet to a scapy compatible string
+
+    #modify the packet all you want here
+    if ICMPv6ND_RA in pkt:
+        pkt[ICMPv6ND_RA].prf = 3 # set low pref for RA packets
+        del pkt[ICMPv6ND_RA].cksum
+        print "Rewrited packet from: ", pkt.src
+        packet.set_payload(str(pkt)) #set the packet content to our modified version
+
+    packet.accept() #accept the packet
+
+
+
+nfqueue = NetfilterQueue()
+#1 is the iptabels rule queue number, modify is the callback function
+nfqueue.bind(1, modify) 
+try:
+    print "[*] waiting for data"
+    nfqueue.run()
+except KeyboardInterrupt:
+    pass
